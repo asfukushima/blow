@@ -1,66 +1,132 @@
-let shapes = []; // an array that will hold our shapes
-let poem = ["don't", "listen", "to", "them", "they", "are", "opressing", "you"];
-let numberOfShapes = 100; // how many words to draw
-let mouseThreshold = 50; // how close can your mouse get to a shape before it moves
-let moveDistance = 150; // how far shapes move away from your mouse
-let animateDistance = 50; // how much each shape animates 
+//grenade image
+let grenadeX = 450; 
+let grenadeY = 300;
+let grenadeSize = 800;
 
-// create a "shape" class that holds all information about each shape
-class Shape {
-  constructor() {
-    this.x = random(0, windowWidth); // each shape has a random x position
-    this.y = random(0, windowHeight); // and a random y position
-    this.radius = random(5, 25); // give each shape a random size between two values
-    this.color = color(random(0, 255), random(0, 255), random(0, 255)); // and a random color
-    this.word = random(poem); // each one has a random word from the poem array
-  }
+//explosions images
+let spawnRate = 4;       
+let explosionSize = 200; 
+let coverGoal = 80;      
 
-  // create a function that moves a shape away from your mouse
-  updateShape() {
-    let mouseDistance = int(dist(this.x, this.y, mouseX, mouseY)); // check the distance from your mouse to the shape
-    if (mouseDistance <= mouseThreshold) { // if your mouse gets closer than the threshold...
-      this.x += random(-moveDistance, moveDistance); // give the shape a new x position
-      this.y += random(-moveDistance, moveDistance); // and a new y position
-    }
-  }
-  
-  // create a function to animate each shape
-  animateShape(){
-    this.x = lerp(this.x, random(this.x - animateDistance, this.x + animateDistance), 0.01);
-    this.y = lerp(this.y, random(this.y - animateDistance, this.y + animateDistance), 0.01);
-  }
+let firstFrame, finalFrame, grenadeImg;
+let explosionImgs = []; // a list holding all 5 explosion images
 
-  // create a function to draw each shape
-  drawShape() {
-    fill(this.color);
-    textAlign(CENTER);
-    textSize(this.radius);
-    text(this.word, this.x, this.y);
-  }
+//exploding  actionscreen
+let state = "explosion";
+let explosions = []; 
+let coveredCount = 0;  
+
+
+function preload() {
+  firstFrame = loadImage("FIRSTFRAME.png");
+  finalFrame = loadImage("FINALFRAME.png");
+  grenadeImg = loadImage("GRENADE.png");
+
+  explosionImgs.push(loadImage("EXPLOSION1.png"));
+  explosionImgs.push(loadImage("EXPLOSION2.png"));
+  explosionImgs.push(loadImage("EXPLOSION3.png"));
+  explosionImgs.push(loadImage("EXPLOSION4.png"));
+  explosionImgs.push(loadImage("EXPLOSION5.png"));
 }
+
 
 function setup() {
-  createCanvas(windowWidth, windowHeight); // create a canvas that fills the whole screen
-  
-  // create a bunch of shape objects
-  for (let i = 0; i < numberOfShapes; i++) {
-    shapes.push(new Shape());
+  createCanvas(windowWidth, windowHeight);
+  imageMode(CENTER); 
+  noStroke();
+}
+
+
+function draw() {
+  background(0);
+
+  if (state === "explosion") {
+    showIdleScreen();
+  } else if (state === "exploding") {
+    showExplosionScreen();
+  } else if (state === "final") {
+    showFinalScreen();
   }
 }
 
-function draw() {
-  background(244);
 
-  // update shape positions based off of the mouse location
-  // and draw them to the screen
-  for (let i = 0; i < shapes.length; i++) {
-    shapes[i].updateShape();
-    shapes[i].animateShape();
-    shapes[i].drawShape();
+function showIdleScreen() {
+  image(firstFrame, width / 2, height / 2, width, height);
+
+  //cursor change hover
+  if (isMouseOnGrenade()) {
+    cursor("pointer");
+  } else {
+    cursor(ARROW);
   }
-  
-  // draw ellipse that follows mouse
-  ellipse(mouseX, mouseY, 50, 50);
+
+  //grenade image
+  image(grenadeImg, grenadeX, grenadeY, grenadeSize, grenadeSize);
+}
+
+
+function showExplosionScreen() {
+  image(firstFrame, width / 2, height / 2, width, height);
+
+  //explosions spawn
+  if (coveredCount < coverGoal) {
+    
+    if (frameCount % 10 === 0) {
+      for (let i = 0; i < spawnRate; i++) {
+      addExplosion();
+    }
+
+  }
+}
+
+  for (let e of explosions) {
+    image(e.img, e.x, e.y, e.size, e.size);
+  }
+
+  if (coveredCount >= coverGoal) {
+    state = "final";
+  }
+}
+
+
+function showFinalScreen() {
+  image(finalFrame, width / 2, height / 2, width, height);
+}
+
+
+function addExplosion() {
+  let randomImg = random(explosionImgs); 
+  let randomX   = random(0, width);      
+  let randomY   = random(0, height);     
+
+  explosions.push({
+    img:  randomImg,
+    x:    randomX,
+    y:    randomY,
+    size: explosionSize
+  });
+
+  coveredCount++; 
+}
+
+
+function mousePressed() {
+  if (state === "explosion" && isMouseOnGrenade()) {
+    state        = "exploding";
+    explosions   = []; 
+    coveredCount = 0;  
+  }
+}
+
+
+function isMouseOnGrenade() {
+  let halfSize = grenadeSize / 2;
+  return (
+    mouseX > grenadeX - halfSize &&
+    mouseX < grenadeX + halfSize &&
+    mouseY > grenadeY - halfSize &&
+    mouseY < grenadeY + halfSize
+  );
 }
 
 function windowResized() {
